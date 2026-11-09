@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audiometría</title>
+  <style>
+    /* ===== COLORES (paleta: vino, rosa, azul noche, salvia y oliva) ===== */
+    :root {
+      --fondo: #f3ece3;         /* crema (fondo de la página) */
+      --tarjeta: #fbf8f2;       /* blanco cálido (fondo de la tarjeta) */
+      --texto: #2e3a4e;         /* azul noche oscuro */
+      --suave: #606757;         /* oliva: texto secundario */
+      --vino: #934d56;          /* color principal */
+      --rosa: #ba9796;
+      --azul: #35445b;          /* azul noche */
+      --salvia: #a3a57e;
+      --borde: #e4d8cf;
+      --rosa-claro: #f4e7e5;    /* fondo de alertas */
+      --salvia-claro: #eeeee2;  /* fondo de datos educativos */
+      --crema-oscuro: #f2eae2;  /* fondo de cajas */
+    }
+
+    body {
+      font-family: "Times New Roman", Times, serif;
+      background: var(--fondo);
+      color: var(--texto);
+      margin: 0;
+      padding: 24px 16px;
+    }
+
+    /* ===== ESTRUCTURA: franja UIS a la izquierda + tarjeta ===== */
+    .marco {
+      max-width: 800px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      border-radius: 16px;
+      box-shadow: 0 6px 24px rgba(53, 68, 91, 0.14);
+    }
+    .lateral {
+      background: var(--azul);
+      color: var(--tarjeta);
+      border-radius: 16px 0 0 16px;
+      padding: 28px 24px;
+    }
+    .lateral-contenido { position: sticky; top: 24px; }
+    .lateral-etiqueta {
+      color: var(--salvia);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.8rem;
+      margin: 0 0 12px;
+    }
+    .lateral h2 {
+      color: var(--tarjeta);
+      font-size: 1.7rem;
+      font-weight: normal;
+      line-height: 1.15;
+      margin: 0;
+      text-wrap: balance;
+    }
+    .lateral .linea { width: 48px; height: 2px; background: var(--salvia); margin: 18px 0; }
+    .lateral p { margin: 0 0 6px; opacity: 0.9; }
+    .tarjeta {
+      background: var(--tarjeta);
+      border-radius: 0 16px 16px 0;
+      overflow: hidden;
+      min-width: 0;
+    }
+    /* En celular la franja pasa arriba */
+    @media (max-width: 700px) {
+      .marco { grid-template-columns: 1fr; }
+      .lateral { border-radius: 16px 16px 0 0; padding: 18px 24px; }
+      .lateral h2 { font-size: 1.35rem; }
+      .lateral .linea { margin: 10px 0; }
+      .tarjeta { border-radius: 0 0 16px 16px; }
+    }
+
+    .encabezado {
+      background: var(--vino);
+      color: var(--tarjeta);
+      padding: 20px 24px;
+    }
+    .encabezado h1 { margin: 0; font-size: 1.8rem; font-weight: normal; letter-spacing: 0.02em; }
+    .encabezado p  { margin: 4px 0 0; opacity: 0.9; }
+    .contenido { padding: 20px 24px 24px; }
+    h2 { margin-top: 0; color: var(--azul); }
+    h3 { color: var(--azul); }
+    .ayuda { font-size: 0.95rem; color: var(--suave); }
+    .progreso { color: var(--vino); font-weight: bold; margin: 0; }
+    .frecuencia { font-size: 2.2rem; font-weight: bold; color: var(--azul); margin: 2px 0 12px; }
+
+    /* ===== FORMULARIO ===== */
+    .campo { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; font-size: 1.05rem; }
+    input[type="number"], select {
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 10px;
+      border: 1.5px solid var(--borde);
+      border-radius: 8px;
+      background: white;
+      color: var(--texto);
+    }
+    input[type="checkbox"] { accent-color: var(--vino); }
+    input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--rosa);
+      outline-offset: 2px;
+    }
+    .casilla { display: flex; gap: 8px; align-items: flex-start; margin-top: 16px; font-size: 1.05rem; }
+    .pequena { font-size: 0.9rem; color: var(--suave); }
+
+    /* ===== BOTONES ===== */
+    button {
+      font-family: inherit;
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .principal  { background: var(--azul); color: var(--tarjeta); border: none; }
+    .secundario { background: white; color: var(--azul); border: 2px solid var(--azul); }
+    .si         { background: var(--vino); color: var(--tarjeta); border: none; }
+    .no         { background: white; color: var(--vino); border: 2px solid var(--vino); }
+    button:active   { transform: scale(0.98); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ===== BARRITA DE REPRODUCCIÓN ===== */
+    .pista { height: 12px; background: #ebe0d6; border-radius: 6px; margin-top: 16px; overflow: hidden; }
+    .relleno { height: 100%; width: 0%; background: linear-gradient(90deg, var(--vino), var(--rosa)); }
+    .estado { font-size: 0.95rem; color: var(--vino); min-height: 1.3em; margin-top: 6px; }
+
+    /* ===== CÓCLEA (membrana basilar desenrollada) ===== */
+    .coclea-titulo { font-size: 0.9rem; color: var(--suave); margin-bottom: 8px; }
+    .tira { position: relative; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--rosa), var(--salvia)); }
+    .marcador {
+      position: absolute;
+      top: 50%;
+      left: 40%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--vino);
+      border: 3px solid var(--tarjeta);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      transform: translate(-50%, -50%);
+      transition: left 0.5s ease;
+    }
+    .extremos { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--suave); margin-top: 6px; }
+    .dato-edu { background: var(--salvia-claro); border-radius: 10px; padding: 10px 12px; margin-top: 14px; }
+    .dato-edu b { color: var(--suave); }
+
+    /* ===== RESULTADOS ===== */
+    .leyenda { text-align: center; font-size: 0.95rem; margin-top: 4px; }
+    .der { color: var(--vino); font-weight: bold; }
+    .izq { color: var(--azul); font-weight: bold; }
+    .caja   { background: var(--crema-oscuro); border: 1px solid var(--borde); border-radius: 10px; padding: 12px; margin-top: 14px; }
+    .alerta { background: var(--rosa-claro); border: 2px solid var(--vino); border-radius: 10px; padding: 12px; margin-top: 14px; }
+    details { border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+    summary { cursor: pointer; font-weight: bold; color: var(--azul); }
+    details p { margin: 8px 0 0; }
+    table { width: 100%; margin-top: 10px; border-collapse: collapse; }
+    th { color: var(--azul); }
+    th, td { border-bottom: 1px solid var(--borde); padding: 6px; text-align: center; font-variant-numeric: tabular-nums; }
+    td.zona { font-size: 0.85rem; color: var(--suave); }
+    td.marcada { background: var(--rosa-claro); color: var(--vino); font-weight: bold; }
+
+    /* ===== ESTADÍSTICAS ===== */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .stat { background: var(--crema-oscuro); border: 1px solid var(--borde); border-radius: 10px; padding: 10px; min-width: 0; }
+    .stat span { display: block; font-size: 0.85rem; color: var(--suave); }
+    .stat b { font-size: 1.25rem; color: var(--azul); font-variant-numeric: tabular-nums; }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 10px;
+      font-family: "Courier New", monospace;
+      font-size: 0.85rem;
+      padding: 8px;
+      border: 1.5px solid var(--borde);
+      border-radius: 8px;
+      background: white;
+      color: var(--texto);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .marcador { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="marco">
+    <!-- ===== FRANJA IZQUIERDA: UNIVERSIDAD ===== -->
+    <aside class="lateral">
+      <div class="lateral-contenido">
+        <p class="lateral-etiqueta">Proyecto final · Fisiología I</p>
+        <h2>Universidad Industrial de Santander</h2>
+        <div class="linea"></div>
+        <p>Bucaramanga, 2026</p>
+      </div>
+    </aside>
+
+  <div class="tarjeta">
+    <div class="encabezado">
+      <h1>Audiometría</h1>
+      <p>Tamizaje de daño auditivo por ruido</p>
+    </div>
+
+    <!-- ===== PANTALLA 1: INICIO ===== -->
+    <div class="contenido" id="pantallaInicio">
+      <h2>¿Usas audífonos todos los días?</h2>
+      <p>Esta prueba de unos 2 minutos busca señales tempranas de daño por ruido, que al inicio no da síntomas.</p>
+
+      <label class="campo" for="edad">Edad
+        <input type="number" id="edad" min="10" max="99" placeholder="Ej: 20">
+      </label>
+
+      <label class="campo" for="horas">¿Cuántas horas al día usas audífonos?
+        <select id="horas">
+          <option value="">Selecciona</option>
+          <option>Menos de 1</option>
+          <option>1 a 2</option>
+          <option>2 a 4</option>
+          <option>Más de 4</option>
+        </select>
+      </label>
+
+      <label class="campo" for="volumen">¿A qué volumen escuchas normalmente?
+        <select id="volumen">
+          <option value="">Selecciona</option>
+          <option>Bajo (menos de la mitad)</option>
+          <option>Medio (la mitad)</option>
+          <option>Alto (más de la mitad)</option>
+        </select>
+      </label>
+
+      <label class="casilla" for="chkConsentimiento">
+        <input type="checkbox" id="chkConsentimiento">
+        Entiendo que es un tamizaje educativo y no reemplaza una audiometría clínica.
+      </label>
+
+      <button class="principal" id="btnContinuar" disabled>Continuar</button>
+    </div>
+
+    <!-- ===== PANTALLA 2: PRUEBA DE SONIDO ===== -->
+    <div class="contenido" id="pantallaSonido" hidden>
+      <h2>Prueba de sonido</h2>
+      <p>Pon el volumen en 50% y presiona Probar. Debes escuchar un pitido primero en el oído derecho y luego en el izquierdo.</p>
+
+      <button class="secundario" id="btnProbar">▶ Probar sonido</button>
+      <div class="pista"><div class="relleno" id="barraSonido"></div></div>
+      <div class="estado" id="estadoSonido"></div>
+
+      <button class="principal" id="btnComenzar" disabled>Lo escuché bien, comenzar</button>
+      <p class="ayuda">¿No suena? Sube el volumen, revisa la conexión y desactiva el modo silencio.</p>
+    </div>
+
+    <!-- ===== PANTALLA 3: LA PRUEBA ===== -->
+    <div class="contenido" id="pantallaTest" hidden>
+      <p class="progreso" id="txtProgreso">Oído derecho · paso 1 de 10</p>
+      <p class="frecuencia" id="txtFrecuencia">1000 Hz</p>
+
+      <div class="coclea-titulo">Zona de tu cóclea que estás evaluando</div>
+      <div class="tira"><div class="marcador" id="marcador"></div></div>
+      <div class="extremos"><span>Base · agudos</span><span>Ápex · graves</span></div>
+
+      <div class="dato-edu"><b>¿Sabías que?</b> <span id="txtDato"></span></div>
+
+      <div class="pista"><div class="relleno" id="barraTest"></div></div>
+      <div class="estado" id="estadoTest">Responde apenas escuches el pitido. A veces no sonará nada.</div>
+
+      <button class="principal" id="btnEmpezar">▶ Empezar</button>
+      <button class="si" id="btnSi" disabled>Sí lo escuché</button>
+      <button class="no" id="btnNo" disabled>No lo escuché</button>
+
+      <label class="casilla pequena" for="chkExaminador">
+        <input type="checkbox" id="chkExaminador">
+        Modo examinador (ver nivel) <b id="txtNivel" hidden></b>
+      </label>
+    </div>
+
+    <!-- ===== PANTALLA 4: RESULTADOS ===== -->
+    <div class="contenido" id="pantallaResultados" hidden>
+      <h2>Resultados</h2>
+      <div id="veredicto"></div>
+
+      <div id="audiograma"></div>
+      <p class="leyenda"><span class="der">O</span> Derecho &nbsp;·&nbsp; <span class="izq">X</span> Izquierdo
+         &nbsp;·&nbsp; Más arriba = mejor audición</p>
+
+      <h3>Tus umbrales</h3>
+      <table>
+        <thead>
+          <tr><th>Hz</th><th>Zona de la cóclea</th><th>Der.</th><th>Izq.</th></tr>
+        </thead>
+        <tbody id="tablaResultados"></tbody>
+      </table>
+      <p class="ayuda">La zona se calcula con la función de Greenwood (1990): la membrana basilar responde
+         a frecuencias altas en la base y a frecuencias bajas en el ápex. NR = no respondió al nivel máximo.
+         Los valores son dB relativos al volumen máximo del dispositivo, no dB HL.</p>
+
+      <h3>Estadísticas de la prueba</h3>
+      <div class="stats" id="estadisticas"></div>
+      <p class="ayuda">Caída 4–6 kHz: cuánto empeora el umbral en 4000–6000 Hz respecto a 2000 Hz.
+         Si es de 10 dB o más y la audición se recupera en 8000 Hz, hay muesca.</p>
+
+      <div id="recomendacion"></div>
+
+      <h3>Aprende más</h3>
+      <details>
+        <summary>¿Cómo leo mi audiograma?</summary>
+        <p>Cada punto es el sonido más suave que escuchaste en esa frecuencia: tu umbral. Más arriba significa
+           que escuchas sonidos más suaves, es decir, mejor audición. Los valores son relativos a tu dispositivo,
+           no son dB HL clínicos.</p>
+      </details>
+      <details id="detMuesca">
+        <summary>¿Qué es la muesca de 4 kHz?</summary>
+        <p>Es una caída de la audición entre 3000 y 6000 Hz, típicamente en 4000 Hz, que se recupera en 8000 Hz. Es la huella típica del
+           daño por ruido. Una explicación es que el conducto auditivo amplifica de forma natural los sonidos entre
+           2000 y 4000 Hz, así que esa zona de la cóclea recibe más energía.</p>
+        <p>En la pérdida por edad (presbiacusia) la audición cae de forma progresiva hacia los agudos y no se
+           recupera en 8000 Hz.</p>
+      </details>
+      <details>
+        <summary>¿Por qué el ruido daña el oído?</summary>
+        <p>Las células ciliadas de la cóclea convierten la vibración del sonido en señales eléctricas para el
+           nervio auditivo. El ruido intenso las sobrecarga y puede dañar sus estereocilios. En los humanos estas
+           células no se regeneran, por eso el daño es permanente. El zumbido después de un concierto es una
+           señal de alerta.</p>
+      </details>
+      <details>
+        <summary>¿Cómo cuido mi audición?</summary>
+        <p>Si la persona de al lado escucha tu música, está muy alta. Toma descansos, prefiere audífonos con
+           cancelación de ruido para no subir el volumen y usa tapones en conciertos.</p>
+      </details>
+      <details>
+        <summary>¿Por qué a veces no sonaba nada?</summary>
+        <p>Eran ensayos trampa. Si respondes "Sí" cuando no sonó nada, la app sabe que pudiste adivinar, y así
+           mide qué tan confiable fue tu prueba.</p>
+      </details>
+      <details>
+        <summary>Copiar datos para Excel</summary>
+        <textarea id="txtDatos" rows="16" wrap="off" readonly></textarea>
+        <button class="secundario" id="btnCopiar">Copiar resultados</button>
+      </details>
+
+      <button class="principal" id="btnRepetir">Repetir prueba</button>
+      <p class="ayuda">Este resultado es un tamizaje educativo y no es un diagnóstico.</p>
+    </div>
+  </div>
+  </div>
+
+  <script>
+    // =====================================================
+    // 1. CONFIGURACIÓN (puedes cambiar estos valores)
+    // =====================================================
+    const frecuencias = [1000, 2000, 4000, 6000, 8000]; // empieza en 1000 Hz, como en clínica
+    const INICIO = -40;        // nivel inicial (audible)
+    const MINIMO = -100;       // nivel más suave posible
+    const MAXIMO = -10;        // tope de seguridad: nunca más fuerte que esto
+    const DURACION = 1.0;      // segundos que dura cada tono
+    const PROB_TRAMPA = 0.1;   // 10% de las veces no suena nada (ensayo trampa)
+
+    // Dato educativo que se muestra en cada frecuencia
+    const INFO = {
+      1000: "La audiometría clínica empieza en 1000 Hz porque casi todos la oyen bien y da resultados muy estables.",
+      2000: "Gran parte de la energía de consonantes como la s, la f y la t está de 2000 Hz hacia arriba. Si se pierde, cuesta entender lo que dicen.",
+      4000: "Esta zona de la cóclea es la primera que se daña con el ruido. Una caída aquí forma la muesca de 4 kHz.",
+      6000: "El daño por ruido puede aparecer entre 3000 y 6000 Hz. Muchas pruebas en línea no evalúan esta frecuencia.",
+      8000: "La base de la cóclea capta los sonidos más agudos. Con la edad es la primera zona que pierde sensibilidad."
+    };
+
+    // =====================================================
+    // 2. ESTADO DE LA PRUEBA
+    // =====================================================
+    let indice = 0;           // posición en la lista de frecuencias
+    let nivel = INICIO;       // nivel actual en dB
+    let oido = "der";         // "der" o "izq"
+    let fase = "bajando";     // "bajando" (de 10 en 10) o "subiendo" (de 5 en 5)
+    let esTrampa = false;
+    let ensayosTrampa = 0;
+    let falsasAlarmas = 0;    // dijo "Sí" cuando no sonó nada
+    let resultados = { der: {}, izq: {} };
+    let totalTonos = 0;       // tonos presentados (incluye ensayos trampa)
+    let inicioPrueba = null;  // para medir cuánto dura la prueba
+    let ctx, tonoActual = null, temporizadorBarra = null, temporizadorSiguiente = null;
+    let esperandoRespuesta = false;   // evita respuestas dobles
+
+    // =====================================================
+    // 3. FUNCIONES DE APOYO
+    // =====================================================
+    function mostrarPantalla(id) {
+      ["pantallaInicio", "pantallaSonido", "pantallaTest", "pantallaResultados"].forEach(function (p) {
+        document.getElementById(p).hidden = (p !== id);
+      });
+      window.scrollTo(0, 0);
+    }
+
+    // Genera un tono puro en un oído
+    function tocarTono(frecuencia, db, oido) {
+      if (!ctx) ctx = new AudioContext();
+      if (ctx.state === "suspended") ctx.resume();
+
+      const osc = ctx.createOscillator();
+      const vol = ctx.createGain();
+      const lado = ctx.createStereoPanner();
+
+      osc.frequency.value = frecuencia;
+      lado.pan.value = oido === "der" ? 1 : -1;
+
+      // dB → amplitud. El volumen sube y baja suave para que no suene un "clic"
+      const ganancia = Math.pow(10, db / 20);
+      const t = ctx.currentTime;
+      vol.gain.setValueAtTime(0, t);
+      vol.gain.linearRampToValueAtTime(ganancia, t + 0.05);
+      vol.gain.setValueAtTime(ganancia, t + DURACION - 0.05);
+      vol.gain.linearRampToValueAtTime(0, t + DURACION);
+
+      osc.connect(vol).connect(lado).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + DURACION);
+      return { osc: osc, vol: vol };
+    }
+
+    // Corta el tono si la persona responde antes de que termine
+    function detenerTono() {
+      if (!tonoActual) return;
+      const t = ctx.currentTime;
+      try {
+        tonoActual.vol.gain.cancelScheduledValues(t);
+        tonoActual.vol.gain.setValueAtTime(tonoActual.vol.gain.value, t);
+        tonoActual.vol.gain.linearRampToValueAtTime(0, t + 0.03);
+        tonoActual.osc.stop(t + 0.04);
+      } catch (e) {}
+      tonoActual = null;
+    }
+
+    function reiniciarBarra(idBarra) {
+      clearTimeout(temporizadorBarra);
+      const barra = document.getElementById(idBarra);
+      barra.style.transition = "none";
+      barra.style.width = "0%";
+    }
+
+    // Barrita que se llena mientras suena. "alTerminar" se ejecuta al final
+    function mostrarBarra(idBarra, idEstado, texto, alTerminar) {
+      reiniciarBarra(idBarra);
+      const barra = document.getElementById(idBarra);
+      const estado = document.getElementById(idEstado);
+      barra.offsetWidth; // reinicia la animación
+      barra.style.transition = "width " + DURACION + "s linear";
+      barra.style.width = "100%";
+      estado.textContent = texto;
+
+      temporizadorBarra = setTimeout(function () {
+        reiniciarBarra(idBarra);
+        estado.textContent = "";
+        if (alTerminar) alTerminar();
+      }, DURACION * 1000);
+    }
+
+    // Tonotopía: posición en la cóclea según la función de Greenwood (humano)
+    // f = 165.4 · (10^(2.1·x) − 0.88), x = fracción de la longitud medida desde el ápex
+    function distanciaApex(f) {
+      return Math.round(Math.log10(f / 165.4 + 0.88) / 2.1 * 100);
+    }
+
+    // =====================================================
+    // 4. PANTALLA 1: INICIO
+    // =====================================================
+    document.getElementById("chkConsentimiento").onchange = function () {
+      document.getElementById("btnContinuar").disabled = !this.checked;
+    };
+    document.getElementById("btnContinuar").onclick = function () {
+      mostrarPantalla("pantallaSonido");
+    };
+
+    // =====================================================
+    // 5. PANTALLA 2: PRUEBA DE SONIDO (derecho y luego izquierdo, a -20 dB)
+    // =====================================================
+    document.getElementById("btnProbar").onclick = function () {
+      const boton = this;
+      boton.disabled = true;
+      tocarTono(1000, -20, "der");
+      mostrarBarra("barraSonido", "estadoSonido", "Oído derecho...", function () {
+        tocarTono(1000, -20, "izq");
+        mostrarBarra("barraSonido", "estadoSonido", "Oído izquierdo...", function () {
+          boton.disabled = false;
+          boton.textContent = "▶ Probar otra vez";
+          document.getElementById("btnComenzar").disabled = false;
+        });
+      });
+    };
+    document.getElementById("btnComenzar").onclick = function () {
+      mostrarPantalla("pantallaTest");
+      actualizarPantalla();
+    };
+
+    // =====================================================
+    // 6. PANTALLA 3: LA PRUEBA
+    // Método descendente-ascendente (Hughson-Westlake simplificado):
+    //   - Si escucha: baja 10 dB
+    //   - Cuando deja de escuchar: sube de 5 en 5
+    //   - Umbral = primer nivel que escucha al subir
+    // =====================================================
+    function actualizarPantalla() {
+      const f = frecuencias[indice];
+      const paso = (oido === "der" ? 0 : frecuencias.length) + indice + 1;
+      document.getElementById("txtProgreso").textContent =
+        (oido === "der" ? "Oído derecho" : "Oído izquierdo") + " · paso " + paso + " de " + (frecuencias.length * 2);
+      document.getElementById("txtFrecuencia").textContent = f + " Hz";
+      document.getElementById("txtDato").textContent = INFO[f];
+      document.getElementById("marcador").style.left = (100 - distanciaApex(f)) + "%";
+      document.getElementById("txtNivel").textContent = nivel + " dB";
+    }
+
+    function bloquearRespuestas(bloquear) {
+      document.getElementById("btnSi").disabled = bloquear;
+      document.getElementById("btnNo").disabled = bloquear;
+    }
+
+    // Para ahorrar pasos: cada frecuencia empieza 5 dB por encima del umbral anterior
+    function nivelInicial() {
+      let ref;
+      if (indice > 0) ref = resultados[oido][frecuencias[indice - 1]];
+      else if (oido === "izq") ref = resultados.der[frecuencias[0]];
+      if (typeof ref !== "number") return INICIO;
+      return Math.min(ref + 5, MAXIMO);
+    }
+
+    // Reproduce un tono. NOVEDAD 1: a veces es un ensayo trampa (la barrita avanza sin sonido)
+    function reproducir() {
+      totalTonos++;
+      esTrampa = Math.random() < PROB_TRAMPA;
+      if (!esTrampa) tonoActual = tocarTono(frecuencias[indice], nivel, oido);
+      esperandoRespuesta = true;
+      bloquearRespuestas(false);
+      mostrarBarra("barraTest", "estadoTest", "Escucha con atención...", function () {
+        tonoActual = null;
+        document.getElementById("estadoTest").textContent = "¿Lo escuchaste?";
+      });
+    }
+
+    function responder(escucho) {
+      if (!esperandoRespuesta) return; // evita respuestas dobles
+      esperandoRespuesta = false;
+      bloquearRespuestas(true);
+      detenerTono();
+      reiniciarBarra("barraTest");
+      document.getElementById("estadoTest").textContent = "";
+
+      let paso = "sigue"; // "sigue", "nuevaFrecuencia", "cambioOido" o "fin"
+
+      if (esTrampa) {
+        ensayosTrampa++;
+        if (escucho) falsasAlarmas++;
+      } else if (fase === "bajando") {
+        if (!escucho) {
+          fase = "subiendo";
+          nivel = Math.min(nivel + 5, MAXIMO);
+        } else if (nivel <= MINIMO) {
+          paso = guardarUmbral(MINIMO);
+        } else {
+          nivel = Math.max(nivel - 10, MINIMO);
+        }
+      } else {
+        if (escucho) {
+          paso = guardarUmbral(nivel);
+        } else if (nivel >= MAXIMO) {
+          paso = guardarUmbral(null); // no respondió (NR)
+        } else {
+          nivel = Math.min(nivel + 5, MAXIMO);
+        }
+      }
+
+      if (paso === "fin") { mostrarResultados(); return; }
+
+      // El siguiente tono suena solo, tras una pausa al azar
+      let pausa = 500 + Math.random() * 700;
+      if (paso === "nuevaFrecuencia") pausa = 1200;
+      if (paso === "cambioOido") {
+        pausa = 2000;
+        document.getElementById("estadoTest").textContent = "Muy bien. Ahora el oído izquierdo.";
+      }
+      actualizarPantalla();
+      temporizadorSiguiente = setTimeout(reproducir, pausa);
+    }
+
+    function guardarUmbral(valor) {
+      resultados[oido][frecuencias[indice]] = valor;
+      indice++;
+      fase = "bajando";
+      let paso = "nuevaFrecuencia";
+      if (indice >= frecuencias.length) {
+        if (oido === "izq") return "fin";
+        oido = "izq";
+        indice = 0;
+        paso = "cambioOido";
+      }
+      nivel = nivelInicial();
+      return paso;
+    }
+
+    document.getElementById("btnEmpezar").onclick = function () {
+      this.hidden = true;
+      inicioPrueba = Date.now();
+      reproducir();
+    };
+    document.getElementById("btnSi").onclick = function () { responder(true); };
+    document.getElementById("btnNo").onclick = function () { responder(false); };
+
+    // En computador también se puede responder con la barra espaciadora
+    document.addEventListener("keydown", function (e) {
+      if (e.code === "Space" && esperandoRespuesta) {
+        e.preventDefault();
+        responder(true);
+      }
+    });
+    document.getElementById("chkExaminador").onchange = function () {
+      document.getElementById("txtNivel").hidden = !this.checked;
+    };
+
+    // =====================================================
+    // 7. PANTALLA 4: RESULTADOS
+    // =====================================================
+    // NOVEDAD 3: zona de la cóclea de cada frecuencia (tonotopía)
+    const ZONAS = {
+      1000: "Media-apical", 2000: "Media", 4000: "Media-basal",
+      6000: "Cerca de la base", 8000: "Base"
+    };
+
+    // Promedio de umbrales (solo si todos son números)
+    function promedio(lista) {
+      if (lista.some(function (v) { return typeof v !== "number"; })) return null;
+      return Math.round(lista.reduce(function (a, b) { return a + b; }, 0) / lista.length);
+    }
+
+    // Cuánto empeora el umbral en 4–6 kHz respecto a 2 kHz (positivo = peor)
+    function caida(r) {
+      if ([r[2000], r[4000], r[6000]].some(function (v) { return typeof v !== "number"; })) return null;
+      return Math.max(r[4000], r[6000]) - r[2000];
+    }
+
+    // Mayor diferencia entre oídos y en qué frecuencia ocurre
+    function mayorDiferencia(orden) {
+      let mayor = null, enFrec = null;
+      orden.forEach(function (f) {
+        const a = resultados.der[f], b = resultados.izq[f];
+        if (typeof a === "number" && typeof b === "number") {
+          const d = Math.abs(a - b);
+          if (mayor === null || d > mayor) { mayor = d; enFrec = f; }
+        }
+      });
+      return { valor: mayor, frecuencia: enFrec };
+    }
+
+    // Frecuencia donde está la muesca (la peor entre 4 y 6 kHz)
+    function frecuenciaMuesca(r) {
+      return r[6000] > r[4000] ? 6000 : 4000;
+    }
+
+    function formatear(v) {
+      if (v === null || v === undefined) return "NR";
+      if (v <= MINIMO) return "≤ " + MINIMO;
+      return v;
+    }
+
+    // NOVEDAD 2: muesca por ruido (criterio adaptado de Coles et al., 2000)
+    // El peor umbral entre 4000 y 6000 Hz es al menos 10 dB peor que en 2000 Hz y en 8000 Hz
+    function hayMuesca(r) {
+      const a2 = r[2000], a4 = r[4000], a6 = r[6000], a8 = r[8000];
+      if ([a2, a4, a6, a8].some(function (v) { return typeof v !== "number"; })) return false;
+      const peor = Math.max(a4, a6);
+      return (peor - a2 >= 10) && (peor - a8 >= 10);
+    }
+
+    function valor(id) {
+      return document.getElementById(id).value || "Sin respuesta";
+    }
+
+    function mostrarResultados() {
+      mostrarPantalla("pantallaResultados");
+      const orden = frecuencias.slice().sort(function (a, b) { return a - b; });
+      const muescaDer = hayMuesca(resultados.der);
+      const muescaIzq = hayMuesca(resultados.izq);
+      const hayAlguna = muescaDer || muescaIzq;
+
+      // Veredicto principal
+      let v;
+      if (hayAlguna) {
+        const cual = muescaDer && muescaIzq ? "ambos oídos" : (muescaDer ? "el oído derecho" : "el oído izquierdo");
+        v = "<div class='alerta'><b>Posible muesca por ruido (4–6 kHz) en " + cual + ".</b> Es el patrón típico del daño " +
+            "por ruido. Te recomendamos hacerte una audiometría clínica.</div>";
+      } else {
+        v = "<div class='caja'><b>No se detectó muesca por ruido.</b> No aparece el patrón típico del daño por ruido.</div>";
+      }
+
+      // Confiabilidad según los ensayos trampa
+      if (ensayosTrampa === 0) {
+        v += "<p class='ayuda'>No hubo ensayos trampa en esta prueba.</p>";
+      } else {
+        // Baja si hubo 2 o más falsas alarmas y son más del 20% de los ensayos trampa
+        const tasa = Math.round(falsasAlarmas / ensayosTrampa * 100);
+        const baja = falsasAlarmas >= 2 && tasa > 20;
+        v += "<p class='ayuda'>Confiabilidad: <b>" + (baja ? "baja" : "aceptable") + "</b> (" +
+             falsasAlarmas + (falsasAlarmas === 1 ? " falsa alarma" : " falsas alarmas") + " en " +
+             ensayosTrampa + (ensayosTrampa === 1 ? " ensayo trampa" : " ensayos trampa") + ")." +
+             (baja ? " Repite la prueba con calma." : "") + "</p>";
+      }
+      document.getElementById("veredicto").innerHTML = v;
+
+      // Audiograma
+      document.getElementById("audiograma").innerHTML = dibujarAudiograma(orden, hayAlguna);
+
+      // NOVEDAD 5: recomendación según el uso de audífonos
+      const horas = valor("horas");
+      const volumen = valor("volumen");
+      let rec = "";
+      if (horas === "2 a 4" || horas === "Más de 4" || volumen.indexOf("Alto") === 0) {
+        rec = "<div class='caja'><b>Tu uso de audífonos es alto.</b> Baja el volumen y toma descansos: " +
+              "el daño por ruido depende de qué tan fuerte y por cuánto tiempo escuchas.</div>";
+      }
+      document.getElementById("recomendacion").innerHTML = rec;
+
+      // Abre la explicación de la muesca si se detectó
+      document.getElementById("detMuesca").open = hayAlguna;
+
+      // ===== Tabla de umbrales con zona de la cóclea (la muesca se resalta) =====
+      const fMuescaDer = muescaDer ? frecuenciaMuesca(resultados.der) : null;
+      const fMuescaIzq = muescaIzq ? frecuenciaMuesca(resultados.izq) : null;
+      let filas = "";
+      orden.forEach(function (f) {
+        filas += "<tr><td>" + f + "</td>" +
+                 "<td class='zona'>" + ZONAS[f] + " (" + distanciaApex(f) + "% desde el ápex)</td>" +
+                 "<td" + (f === fMuescaDer ? " class='marcada'" : "") + ">" + formatear(resultados.der[f]) + "</td>" +
+                 "<td" + (f === fMuescaIzq ? " class='marcada'" : "") + ">" + formatear(resultados.izq[f]) + "</td></tr>";
+      });
+      document.getElementById("tablaResultados").innerHTML = filas;
+
+      // ===== Estadísticas =====
+      const promDer = promedio([resultados.der[1000], resultados.der[2000], resultados.der[4000]]);
+      const promIzq = promedio([resultados.izq[1000], resultados.izq[2000], resultados.izq[4000]]);
+      const caidaDer = caida(resultados.der);
+      const caidaIzq = caida(resultados.izq);
+      const asim = mayorDiferencia(orden);
+      const tasaFA = ensayosTrampa ? Math.round(falsasAlarmas / ensayosTrampa * 100) : 0;
+      const segundos = inicioPrueba ? Math.round((Date.now() - inicioPrueba) / 1000) : 0;
+      const duracion = Math.floor(segundos / 60) + ":" + String(segundos % 60).padStart(2, "0") + " min";
+
+      function dB(v, conSigno) {
+        if (v === null) return "—";
+        return (conSigno && v > 0 ? "+" : "") + v + " dB";
+      }
+      function tarjeta(etiqueta, texto) {
+        return "<div class='stat'><span>" + etiqueta + "</span><b>" + texto + "</b></div>";
+      }
+      document.getElementById("estadisticas").innerHTML =
+        tarjeta("Promedio derecho (1, 2 y 4 kHz)", dB(promDer)) +
+        tarjeta("Promedio izquierdo (1, 2 y 4 kHz)", dB(promIzq)) +
+        tarjeta("Caída 4–6 kHz derecho", dB(caidaDer, true)) +
+        tarjeta("Caída 4–6 kHz izquierdo", dB(caidaIzq, true)) +
+        tarjeta("Mayor diferencia entre oídos" + (asim.frecuencia ? " (" + asim.frecuencia + " Hz)" : ""), dB(asim.valor)) +
+        tarjeta("Falsas alarmas", falsasAlarmas + " de " + ensayosTrampa + " (" + tasaFA + "%)") +
+        tarjeta("Tonos presentados", totalTonos) +
+        tarjeta("Duración de la prueba", duracion);
+
+      // ===== Datos para copiar (separados por tabulaciones para Excel) =====
+      function celda(v) { return v === null ? "" : v; }
+      let datos = "Edad\t" + valor("edad") + "\n" +
+                  "Horas de audífonos al día\t" + horas + "\n" +
+                  "Volumen habitual\t" + volumen + "\n\n" +
+                  "Frecuencia (Hz)\tZona de la cóclea\tDerecho (dB)\tIzquierdo (dB)\n";
+      orden.forEach(function (f) {
+        datos += f + "\t" + ZONAS[f] + "\t" + formatear(resultados.der[f]) + "\t" + formatear(resultados.izq[f]) + "\n";
+      });
+      datos += "\nMuesca 4-6 kHz derecho\t" + (muescaDer ? "Sí" : "No") + "\n" +
+               "Muesca 4-6 kHz izquierdo\t" + (muescaIzq ? "Sí" : "No") + "\n" +
+               "Promedio derecho 1-4 kHz (dB)\t" + celda(promDer) + "\n" +
+               "Promedio izquierdo 1-4 kHz (dB)\t" + celda(promIzq) + "\n" +
+               "Caída 4-6 kHz derecho (dB)\t" + celda(caidaDer) + "\n" +
+               "Caída 4-6 kHz izquierdo (dB)\t" + celda(caidaIzq) + "\n" +
+               "Mayor diferencia entre oídos (dB)\t" + celda(asim.valor) + "\n" +
+               "Ensayos trampa\t" + ensayosTrampa + "\n" +
+               "Falsas alarmas\t" + falsasAlarmas + "\n" +
+               "Tasa de falsas alarmas (%)\t" + tasaFA + "\n" +
+               "Tonos presentados\t" + totalTonos + "\n" +
+               "Duración (s)\t" + segundos + "\n";
+      document.getElementById("txtDatos").value = datos;
+    }
+
+    // Dibuja el audiograma en SVG (convención clínica: derecho O rojo, izquierdo X azul)
+    function dibujarAudiograma(orden, marcar4k) {
+      const W = 380, H = 280;
+      const m = { izq: 50, der: 24, arr: 16, aba: 44 };
+      const anchoUtil = W - m.izq - m.der;
+      const altoUtil = H - m.arr - m.aba;
+      // Eje de frecuencia logarítmico, como en un audiograma real
+      function x(f) { return m.izq + Math.log2(f / orden[0]) / Math.log2(orden[orden.length - 1] / orden[0]) * anchoUtil; }
+      function y(db) { return m.arr + (db - MINIMO) / (0 - MINIMO) * altoUtil; }
+
+      let s = "<svg viewBox='0 0 " + W + " " + H + "' width='100%' role='img' aria-label='Audiograma'>";
+
+      // Franja morada entre 4 y 6 kHz si hay muesca
+      if (marcar4k) {
+        s += "<rect x='" + (x(4000) - 14) + "' y='" + m.arr + "' width='" + (x(6000) - x(4000) + 28) +
+             "' height='" + altoUtil + "' fill='#f4e7e5'/>";
+      }
+
+      // Líneas horizontales cada 10 dB
+      for (let db = MINIMO; db <= 0; db += 10) {
+        s += "<line x1='" + m.izq + "' x2='" + (W - m.der) + "' y1='" + y(db) + "' y2='" + y(db) + "' stroke='#e4d8cf'/>";
+        if (db % 20 === 0) {
+          s += "<text x='" + (m.izq - 8) + "' y='" + (y(db) + 4) + "' text-anchor='end' font-size='12' fill='#606757'>" + db + "</text>";
+        }
+      }
+
+      // Líneas verticales y etiquetas de frecuencia
+      orden.forEach(function (f) {
+        s += "<line x1='" + x(f) + "' x2='" + x(f) + "' y1='" + m.arr + "' y2='" + (H - m.aba) + "' stroke='#e4d8cf'/>";
+        const etiqueta = f >= 1000 ? (f / 1000) + "k" : f;
+        s += "<text x='" + x(f) + "' y='" + (H - m.aba + 18) + "' text-anchor='middle' font-size='12' fill='#606757'>" + etiqueta + "</text>";
+      });
+
+      // Títulos de los ejes
+      s += "<text x='" + (m.izq + anchoUtil / 2) + "' y='" + (H - 6) + "' text-anchor='middle' font-size='12' fill='#606757'>Frecuencia (Hz)</text>";
+      s += "<text transform='translate(14 " + (m.arr + altoUtil / 2) + ") rotate(-90)' text-anchor='middle' font-size='12' fill='#606757'>Nivel (dB relativos)</text>";
+
+      // Una serie de puntos por oído
+      function serie(r, color, tipo) {
+        const puntos = [];
+        orden.forEach(function (f, i) {
+          if (typeof r[f] === "number") puntos.push([x(f), y(r[f])]);
+        });
+        let out = "";
+        if (puntos.length > 1) {
+          out += "<polyline points='" + puntos.map(function (p) { return p.join(","); }).join(" ") +
+                 "' fill='none' stroke='" + color + "' stroke-width='2'" + (tipo === "x" ? " stroke-dasharray='5 4'" : "") + "/>";
+        }
+        puntos.forEach(function (p) {
+          if (tipo === "o") {
+            out += "<circle cx='" + p[0] + "' cy='" + p[1] + "' r='6' fill='white' stroke='" + color + "' stroke-width='2.5'/>";
+          } else {
+            out += "<path d='M" + (p[0] - 5) + " " + (p[1] - 5) + " L" + (p[0] + 5) + " " + (p[1] + 5) +
+                   " M" + (p[0] + 5) + " " + (p[1] - 5) + " L" + (p[0] - 5) + " " + (p[1] + 5) +
+                   "' stroke='" + color + "' stroke-width='2.5' fill='none'/>";
+          }
+        });
+        return out;
+      }
+      s += serie(resultados.der, "#934d56", "o");
+      s += serie(resultados.izq, "#35445b", "x");
+      s += "</svg>";
+      return s;
+    }
+
+    // Copiar resultados
+    document.getElementById("btnCopiar").onclick = function () {
+      const area = document.getElementById("txtDatos");
+      const boton = this;
+      function listo() { boton.textContent = "Copiado ✓"; }
+      function respaldo() { area.select(); document.execCommand("copy"); listo(); }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(area.value).then(listo, respaldo);
+      } else {
+        respaldo();
+      }
+    };
+
+    document.getElementById("btnRepetir").onclick = function () {
+      location.reload();
+    };
+  </script>
+</body>
+</html>
